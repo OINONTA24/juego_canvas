@@ -2,19 +2,27 @@ var canvas = null,
     ctx = null,
     x = 50,
     y = 50,
+    vel = 50,
     presionar = null,
     dir = 0,
     score = 0,
     player = null,
     food = null,
     wall = new Array(),
-    gameover = true;
+    gameover = true,
+    newWall,
+    muros = [
+        {x:300,y:150},
+        {x:300,y:300},
+        {x:600,y:300},
+        {x:600,y:150},
+    ];
     
     KEY_LEFT = 37, //Flecha izq
     KEY_UP = 38,   //Flecha arriba
     KEY_RIGHT = 39, //Fecha der
     KEY_DOWN = 40, //Flecha abajo
-    KEY_ENTER = 13,
+    KEY_ENTER = 13, //Pausa
     pause = true;
 
 
@@ -70,6 +78,11 @@ function reset(){
     food.x = random(canvas.width / 10 - 1) * 10;
     food.y = random(canvas.height / 10 - 1) * 10;
     gameover = false;
+
+    wall = [];
+    for (var i = 0; i < muros.length; i++) {
+        wall.push(new Rectangle(muros[i].x, muros[i].y, 10, 10));
+    }
 }
 
 function paint(ctx) {
@@ -89,7 +102,7 @@ function paint(ctx) {
     ctx.fillStyle = '#fff';
 
     //puntuaje
-    ctx.fillText('Score: ' + score, 0, 10);
+    ctx.fillText('Score: ' + score, 0, 10,900);
 
     //muros
     ctx.fillStyle = '#999';
@@ -100,17 +113,18 @@ function paint(ctx) {
     //pausa inicial
     if(pause){
         ctx.textAlign = 'center';
-        if(!gameover){
-            ctx.fillText('Game over',150,75);
+        if(gameover){
+            ctx.fillText('Game over',450,200);
         }else{
-            ctx.fillText('Pause',150,75);
+            ctx.fillText('Pause',450,200);
         }
         ctx.textAlign = 'left';
     }
 }
 
 function act(){
-    var i,l;
+    var i,l,x=50;
+    scoreini=0.5;
     if(!pause){
         if(gameover){
             reset();
@@ -161,6 +175,31 @@ function act(){
             score += 1;
             food.x = random(canvas.width / 10 - 1) * 10;
             food.y = random(canvas.height / 10 - 1) * 10;
+            for (var i = 0; i < wall.length; i++) {
+                var newX, newY;
+                do {
+                    newX = random(canvas.width / 10 - 1) * 10;
+                    newY = random(canvas.height / 10 - 1) * 10;
+                } while (
+                    (newX === player.x && newY === player.y) ||
+                    (newX === food.x && newY === food.y)        
+                );
+        
+                wall[i].x = newX;
+                wall[i].y = newY;
+            }
+            do {
+                newWall = new Rectangle(
+                    random(canvas.width / 10 - 1) * 10,random(canvas.height / 10 - 1) * 10,10,10);
+            } while (
+                newWall.intersects(player) ||
+                newWall.intersects(food) ||
+                wall.some(w => w.x === newWall.x && w.y === newWall.y) // evitar que se superponga con otros muros
+            );
+            if (score % 3 === 0 && vel > 20) {
+                vel -= 5; // reduce el tiempo entre frames = más rápido
+            }
+            wall.push(newWall);
         }
         //interseccion de los muros
         for (i = 0, l = wall.length; i < l; i += 1) {
@@ -171,6 +210,7 @@ function act(){
     
             if (player.intersects(wall[i])) {
                 pause = true;
+                gameover = true;
             }
         }
     }
@@ -187,8 +227,8 @@ function repaint(){
 }
 
 function run(){
-    setTimeout(run, 50);
-    act()
+    setTimeout(run, vel);
+    act();
 }
 
 function init() {
@@ -197,15 +237,11 @@ function init() {
 
     player = new Rectangle(40,40,10,10);
     food = new Rectangle(80,80,10,10);
+    
+    reset();
 
-    wall.push(new Rectangle(100,50,10,10));
-    wall.push(new Rectangle(100,100,10,10));
-    wall.push(new Rectangle(200,50,10,10));
-    wall.push(new Rectangle(200,100,10,10));
-
-    run()
+    run();
     repaint();
 }
 window.addEventListener('load', init, false);
-
 
